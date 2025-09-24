@@ -23,6 +23,10 @@ testRouter
   .get(authController.restrictTo('admin', 'teacher'), testController.getAllTests);
 
 testRouter
+  .route('/:id/results')
+  .get(authController.restrictTo('admin', 'teacher'), testController.getTestResults);
+
+testRouter
   .route('/:id')
   .get(testController.getTest)
   .patch(

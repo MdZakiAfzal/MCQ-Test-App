@@ -3,6 +3,7 @@ const catchAsync = require(`${__dirname}/../utils/catchAsync`);
 const Test = require(`${__dirname}/../Models/test_model`);
 const { toUTCFromISTInput, getEndOfISTDay, getISTDayBounds, formatToIST } = require(`${__dirname}/../utils/timeUtils`);
 const { validateTestInput } = require(`${__dirname}/../utils/validateTest`);
+const Attempt = require(`${__dirname}/../Models/attempt_model`);
 
 // CREATE TEST (admin/teacher)
 exports.createTest = catchAsync(async (req, res, next) => {
@@ -167,5 +168,36 @@ exports.deleteTest = catchAsync(async (req, res, next) => {
   res.status(204).json({
     status: 'success',
     data: null
+  });
+});
+
+// Get all student attempts and scores for a specific test (admin/teacher)
+exports.getTestResults = catchAsync(async (req, res, next) => {
+  const test = await Test.findById(req.params.id);
+  if(!test){
+    return next(new AppError('No test found with that ID', 404))
+  }
+
+  const attempts = await Attempt.find({ test: test._id })
+    .select('student score attemptedAt')
+    .populate('student', 'name email _id') // 2. For each attempt, fetch the student's name and email
+    .sort({ score: -1 }); // 3. Sort the results to show the highest score first
+
+  const results = attempts.map(attempt => {
+    // Return a new, flat object for each attempt
+    return {
+      studentId: attempt.student._id,
+      name: attempt.student.name,
+      email: attempt.student.email,
+      score: attempt.score
+    };
+  });
+
+  res.status(200).json({
+    status: 'success',
+    results: results.length,
+    data: {
+      results
+    }
   });
 });

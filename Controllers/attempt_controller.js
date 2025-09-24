@@ -91,35 +91,58 @@ exports.submitAttempt = catchAsync(async (req, res, next) => {
 
     // Score calculation
     let score = 0;
-    answers.forEach(ans => {
-        const question = test.questions[ans.questionId];
-        if (question && ans.selectedOption !== undefined && ans.selectedOption !== null) {
-            if (question.correctAnswer === ans.selectedOption) {
-                score++;
+    let correctAnswers = 0;
+    let incorrectAnswers = 0;
+    let attemptedQuestions = 0;
+    const totalMarks = test.questions.length * 4;
+    const totalQuestions = test.questions.length;
+
+    // Use a Map for efficient lookup of student's answers
+    const answerMap = new Map(answers.map(a => [a.questionId, a.selectedOption]));
+
+    test.questions.forEach((question, index) => {
+        const studentAnswer = answerMap.get(index);
+
+        if (studentAnswer !== undefined && studentAnswer !== null) {
+            // Question was attempted
+            attemptedQuestions++;
+            if (question.correctAnswer === studentAnswer) {
+                score += 4;
+                correctAnswers++;
+            } else {
+                score -= 1;
+                incorrectAnswers++;
             }
         }
+        // If unattempted, score remains 0 for this question
     });
 
     attempt.answers = answers;
     attempt.score = score;
+    attempt.summary = {
+        score,
+        totalMarks,
+        totalQuestions,
+        attemptedQuestions,
+        correctAnswers,
+        incorrectAnswers,
+        unattemptedQuestions: totalQuestions - attemptedQuestions,
+    };
     attempt.attemptedAt = new Date();
     attempt.completed = true;
     await attempt.save();
 
-    // ✅ Use Map for O(1) lookups
-    const answerMap = new Map(answers.map(a => [a.questionId, a.selectedOption]));
+    // Prepare the detailed question breakdown for the response
     const questionsWithAnswers = test.questions.map((q, idx) => ({
-        questionId: idx,
-        questionText: q.questionText,
-        options: q.options,
-        correctAnswer: q.correctAnswer,
+        ...q.toObject(),
         studentAnswer: answerMap.get(idx) ?? null
     }));
 
     res.status(200).json({
         status: 'success',
         data: { 
-            score, 
+            // Add the new summary data to the response
+            summary: attempt.summary,
             questions: questionsWithAnswers,
             submittedAt: attempt.attemptedAt,
             submittedAtIST: formatToIST(attempt.attemptedAt)
@@ -130,7 +153,12 @@ exports.submitAttempt = catchAsync(async (req, res, next) => {
 // Past Attempts
 exports.getPastAttempts = catchAsync(async (req, res, next) => {
   const attempts = await Attempt.find({ student: req.user._id, completed: true })
-    .populate('test', 'title description questions examDuration startTime endTime');
+    .populate({
+      path: 'test',
+      select: 'title questions'
+    })
+    .select('summary score answers attemptedAt test')
+    .sort({ attemptedAt: -1 });
 
   const pastTests = attempts.map(a => {
     if (!a.test) {
@@ -141,28 +169,15 @@ exports.getPastAttempts = catchAsync(async (req, res, next) => {
     const answerMap = new Map(a.answers.map(ans => [ans.questionId, ans.selectedOption]));
 
     const questionsWithAnswers = a.test.questions.map((q, idx) => ({
-      questionId: idx,
-      questionText: q.questionText,
-      options: q.options,
-      correctAnswer: q.correctAnswer,
+      ...q.toObject(),
       studentAnswer: answerMap.get(idx) ?? null
     }));
 
     return {
-      test: {
-        _id: a.test._id,
-        title: a.test.title,
-        description: a.test.description,
-        questions: questionsWithAnswers,
-        examDuration: a.test.examDuration,
-        startTime: a.test.startTime,
-        startTimeIST: formatToIST(a.test.startTime),
-        endTime: a.test.endTime,
-        endTimeIST: formatToIST(a.test.endTime)
-      },
-      score: a.score,
+      summary: a.summary|| { score: a.score, totalMarks: a.test.questions.length * 4 }, // Retrieve the stored summary
+      questions: questionsWithAnswers,
       attemptedAt: a.attemptedAt,
-      attemptedAtIST: formatToIST(a.attemptedAt)
+      testTitle: a.test.title
     };
   }).filter(Boolean); // remove nulls if test was deleted
 

@@ -52,4 +52,9 @@ testSchema.pre('save', function(next) {
     next();
 });
 
+testSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
+  await this.model('Attempt').deleteMany({ test: this._id });
+  next();
+});
+
 module.exports = mongoose.model('Test', testSchema);
