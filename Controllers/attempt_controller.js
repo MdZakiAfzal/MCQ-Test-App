@@ -18,18 +18,23 @@ exports.startAttempt = catchAsync(async (req, res, next) => {
     }
 
     // Prevent duplicate attempts
-    const existing = await Attempt.findOne({ student: req.user._id, test: testId });
-    if (existing) {
-        return next(new AppError('You have already started this test', 400));
-    }
+    // Find any existing attempt for this test
+    let attempt = await Attempt.findOne({ student: req.user._id, test: testId });
 
-    const attempt = await Attempt.create({
-        student: req.user._id,
-        test: testId,
-        answers: [],
-        score: 0,
-        startedAt: now
-    });
+    // If an attempt exists and is already completed, stop.
+    if (attempt && attempt.completed) {
+        return next(new AppError('You have already completed this test', 400));
+    }
+    
+    // If no attempt exists at all, create it.
+    if (!attempt) {
+        attempt = await Attempt.create({
+            student: req.user._id,
+            test: testId,
+            startedAt: now
+            // Other fields will have their default values (e.g., completed: false)
+        });
+    }
 
     res.status(201).json({
         status: 'success',

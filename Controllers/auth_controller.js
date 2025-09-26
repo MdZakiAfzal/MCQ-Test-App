@@ -29,7 +29,9 @@ const createSendToken = (user, statusCode, res) => {
 // Create User
 exports.createUser = catchAsync(async (req, res, next) => {
     const { name, email, password, confirmPassword, role } = req.body;
-
+    if(role === 'admin'){
+        return next("You don't have permission to create an admin!");
+    }
     const newUser = await User.create({
         name,
         email,
