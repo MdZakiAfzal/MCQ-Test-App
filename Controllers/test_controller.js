@@ -1,9 +1,9 @@
-const AppError = require(`${__dirname}/../utils/appErrors`);
-const catchAsync = require(`${__dirname}/../utils/catchAsync`);
-const Test = require(`${__dirname}/../Models/test_model`);
-const { toUTCFromISTInput, getEndOfISTDay, getISTDayBounds, formatToIST } = require(`${__dirname}/../utils/timeUtils`);
-const { validateTestInput } = require(`${__dirname}/../utils/validateTest`);
-const Attempt = require(`${__dirname}/../Models/attempt_model`);
+const AppError = require(`../utils/appErrors`);
+const catchAsync = require(`../utils/catchAsync`);
+const Test = require(`../Models/test_model`);
+const { toUTCFromISTInput, getEndOfISTDay, getISTDayBounds, formatToIST } = require(`../utils/timeUtils`);
+const { validateTestInput } = require(`../utils/validateTest`);
+const Attempt = require(`../Models/attempt_model`);
 
 // CREATE TEST (admin/teacher)
 exports.createTest = catchAsync(async (req, res, next) => {

@@ -1,8 +1,8 @@
 const express = require('express');
-const testController = require(`${__dirname}/../Controllers/test_controller`);
-const authController = require(`${__dirname}/../Controllers/auth_controller`);
-const { validateBody } = require(`${__dirname}/../utils/validate`);
-const { createTestSchema, updateTestSchema } = require(`${__dirname}/../validation/schemas`);
+const testController = require(`../Controllers/test_controller`);
+const authController = require(`../Controllers/auth_controller`);
+const { validateBody } = require(`../utils/validate`);
+const { createTestSchema, updateTestSchema } = require(`../validation/schemas`);
 
 const testRouter = express.Router();
 

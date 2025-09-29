@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const User = require(`${__dirname}/../Models/user_model`);
-const catchAsync = require(`${__dirname}/../utils/catchAsync`);
-const AppError = require(`${__dirname}/../utils/appErrors`);
+const User = require(`../Models/user_Model`);
+const catchAsync = require(`../utils/catchAsync`);
+const AppError = require(`../utils/appErrors`);
 const { promisify } = require('util');
-const sendEmail = require(`${__dirname}/../utils/email`);
+const sendEmail = require(`../utils/email`);
 
 // helper to create token
 const signToken = (id) => {

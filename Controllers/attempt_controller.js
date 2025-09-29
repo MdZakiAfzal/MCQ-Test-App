@@ -1,8 +1,8 @@
-const Attempt = require(`${__dirname}/../Models/attempt_model`);
-const Test = require(`${__dirname}/../Models/test_model`);
-const AppError = require(`${__dirname}/../utils/appErrors`);
-const catchAsync = require(`${__dirname}/../utils/catchAsync`);
-const { getEndOfISTDay, formatToIST } = require(`${__dirname}/../utils/timeUtils`);
+const Attempt = require(`../Models/attempt_model`);
+const Test = require(`../Models/test_model`);
+const AppError = require(`../utils/appErrors`);
+const catchAsync = require(`../utils/catchAsync`);
+const { getEndOfISTDay, formatToIST } = require(`../utils/timeUtils`);
 
 // Start Attempt
 exports.startAttempt = catchAsync(async (req, res, next) => {

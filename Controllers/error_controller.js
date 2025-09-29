@@ -1,4 +1,4 @@
-const AppError = require(`${__dirname}/../utils/appErrors`);
+const AppError = require(`../utils/appErrors`);
 
 // Handles Mongoose CastError (e.g., invalid ObjectId)
 const handleCastErrorDB = err => {
