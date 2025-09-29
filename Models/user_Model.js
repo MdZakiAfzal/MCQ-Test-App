@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const validator = require('validator');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
     name: { 
@@ -41,6 +42,8 @@ const userSchema = new mongoose.Schema({
         default: Date.now 
     },
     passwordChangedAt: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
 });
 
 // Encrypt password before saving
@@ -53,9 +56,42 @@ userSchema.pre('save', async function (next) {
     next();
 });
 
+//method to check if the user has changed their password after a JWT was issued
+userSchema.methods.passwordChangedAfter = function(JWTTimestamp){
+    if(this.passwordChangedAt){
+        const passwordChangedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        //console.log(passwordChangedTimestamp, JWTTimestamp)
+        return JWTTimestamp < passwordChangedTimestamp;
+    }
+    return false;
+}
+
 // Compare entered password with hashed one
 userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
 };
+
+userSchema.methods.createPasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    this.passwordResetToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    // Token expires in 10 minutes
+    this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+    return resetToken; // Return the un-hashed token to send via email
+};
+
+userSchema.pre('save', function(next){
+    if(!this.isModified('password') || this.isNew){
+        return next();
+    }
+    
+    this.passwordChangedAt = Date.now() - 1000;
+    next();
+})
 
 module.exports = mongoose.model('User', userSchema);

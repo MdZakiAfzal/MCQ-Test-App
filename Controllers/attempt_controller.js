@@ -18,30 +18,22 @@ exports.startAttempt = catchAsync(async (req, res, next) => {
     }
 
     // Prevent duplicate attempts
-    // Find any existing attempt for this test
-    let attempt = await Attempt.findOne({ student: req.user._id, test: testId });
-
-    // If an attempt exists and is already completed, stop.
-    if (attempt && attempt.completed) {
-        return next(new AppError('You have already completed this test', 400));
-    }
+    // Find any existing attempt for this test and delete them
+     await Attempt.findOneAndDelete({ student: req.user._id, test: testId });
     
-    // If no attempt exists at all, create it.
-    if (!attempt) {
-        attempt = await Attempt.create({
-            student: req.user._id,
-            test: testId,
-            startedAt: now
-            // Other fields will have their default values (e.g., completed: false)
-        });
-    }
+    // Always create a new attempt record.
+    const newAttempt = await Attempt.create({
+        student: req.user._id,
+        test: testId,
+        startedAt: now
+    });
 
     res.status(201).json({
         status: 'success',
         data: { 
-            attemptId: attempt._id, 
-            startedAt: attempt.startedAt,
-            startedAtIST: formatToIST(attempt.startedAt)
+            attemptId: newAttempt._id, 
+            startedAt: newAttempt.startedAt,
+            startedAtIST: formatToIST(newAttempt.startedAt)
         }
     });
 });
@@ -130,7 +122,7 @@ exports.submitAttempt = catchAsync(async (req, res, next) => {
         totalQuestions,
         attemptedQuestions,
         correctAnswers,
-        incorrectAnswers,
+        incorrectAnswers,   
         unattemptedQuestions: totalQuestions - attemptedQuestions,
     };
     attempt.attemptedAt = new Date();

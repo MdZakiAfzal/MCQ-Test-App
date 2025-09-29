@@ -189,7 +189,8 @@ exports.getTestResults = catchAsync(async (req, res, next) => {
       studentId: attempt.student._id,
       name: attempt.student.name,
       email: attempt.student.email,
-      score: attempt.score
+      score: attempt.score,
+      //totalMarks: 
     };
   });
 

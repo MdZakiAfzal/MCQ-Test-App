@@ -7,6 +7,12 @@ router.post('/login', authController.login);
 
 router.post('/create-user', authController.protect, authController.restrictTo('admin', 'teacher'), authController.createUser);
 
+router.post('/forgot-password', authController.forgotPassword);
+
+router.patch('/reset-password/:token', authController.resetPassword);
+
+router.patch('/updateMyPassword', authController.protect, authController.updatePassword);
+
 // ONLY FOR one time use to create admin: remove after first use!
 /*router.post('/signup-admin', async (req, res, next) => {
     const User = require(`${__dirname}/../Models/user_model`);

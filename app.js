@@ -38,7 +38,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Body parser, reading data from body into req.body
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '50kb' }));
 
 // Prevent parameter pollution
 app.use(hpp());
