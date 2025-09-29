@@ -26,7 +26,7 @@ app.use(helmet());
 
 // CORS 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // TODO: replace * with your React domain in production
+  origin: process.env.FRONTEND_URL, // TODO: replace * with your React domain in production
   credentials: true
 }));
 
