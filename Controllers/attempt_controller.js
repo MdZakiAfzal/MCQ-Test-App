@@ -142,7 +142,8 @@ exports.submitAttempt = catchAsync(async (req, res, next) => {
             summary: attempt.summary,
             questions: questionsWithAnswers,
             submittedAt: attempt.attemptedAt,
-            submittedAtIST: formatToIST(attempt.attemptedAt)
+            submittedAtIST: formatToIST(attempt.attemptedAt),
+            title: test.title
         }
     });
 });
