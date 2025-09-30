@@ -174,8 +174,8 @@ exports.getPastAttempts = catchAsync(async (req, res, next) => {
     return {
       summary: a.summary|| { score: a.score, totalMarks: a.test.questions.length * 4 }, // Retrieve the stored summary
       questions: questionsWithAnswers,
-      attemptedAt: a.attemptedAt,
-      testTitle: a.test.title
+      submittedAt: a.attemptedAt,
+      title: a.test.title
     };
   }).filter(Boolean); // remove nulls if test was deleted
 
