@@ -126,18 +126,16 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
     const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    const message = `Forgot your password? Please click this link to reset your password: ${resetURL} \nIf you did'nt forgot your password please ignore this email `;
-
     try {
         await sendEmail({
             email: user.email,
             subject: 'Your password reset token (valid for 10 min)',
-            message,
+            resetURL,
         });
 
         res.status(200).json({
             status: 'success',
-            message: 'Token sent to email!',
+            message: 'Password reset link sent to email!',
         });
     } catch (err) {
         // If sending email fails, undo the changes to the user document
