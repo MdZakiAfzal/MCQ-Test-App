@@ -1,15 +1,9 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
+
+// Set SendGrid API Key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendEmail = async (options) => {
-  const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-
-  // Enhanced email template for password reset
   const htmlTemplate = `
     <!DOCTYPE html>
     <html>
@@ -76,12 +70,12 @@ const sendEmail = async (options) => {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Homoeopath Shala</h1>
+          <h1>HomoeoPathshala</h1>
           <p>Password Reset Request</p>
         </div>
         <div class="content">
           <h2>Hello,</h2>
-          <p>You requested to reset your password for your Homoeopath Shala account.</p>
+          <p>You requested to reset your password for your HomoeoPathshala account.</p>
           <p>Click the button below to reset your password:</p>
           <div style="text-align: center;">
             <a href="${options.resetURL}" class="button">Reset Your Password</a>
@@ -100,34 +94,22 @@ const sendEmail = async (options) => {
     </html>
   `;
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM,
+  const msg = {
     to: options.email,
+    from: process.env.EMAIL_FROM,
     subject: options.subject,
-    text: options.message, // Plain text version
-    html: htmlTemplate, // HTML version
+    text: `Forgot your password? Click this link to reset: ${options.resetURL}`,
+    html: htmlTemplate,
   };
 
   try {
-    // Verify transporter configuration
-    await transporter.verify();
-    console.log('✅ Email server is ready to send messages');
-
-    // Send email
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', result.messageId);
-    
-    return result;
+    await sgMail.send(msg);
+    console.log('✅ Email sent successfully via SendGrid');
   } catch (error) {
-    console.error('❌ ERROR SENDING EMAIL:', error);
+    console.error('❌ ERROR SENDING EMAIL via SendGrid:', error);
     
-    // More detailed error logging
-    if (error.code === 'EAUTH') {
-      console.error('Authentication failed. Check your Gmail credentials and App Password.');
-    } else if (error.code === 'EENVELOPE') {
-      console.error('Invalid email address or envelope configuration.');
-    } else {
-      console.error('Email sending error details:', error);
+    if (error.response) {
+      console.error('SendGrid error details:', error.response.body);
     }
     
     throw new Error('There was an error sending the email. Please try again later.');
