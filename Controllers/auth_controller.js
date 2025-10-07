@@ -7,15 +7,16 @@ const { promisify } = require('util');
 const sendEmail = require(`../utils/email`);
 
 // helper to create token
-const signToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
+const signToken = (id, sessionId) => {
+    return jwt.sign({ id, session: sessionId }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
     });
 };
 
 // send token + user
-const createSendToken = (user, statusCode, res) => {
-    const token = signToken(user._id);
+const createSendToken = async (user, statusCode, res) => {
+    const sessionId = user.currentSession;
+    const token = signToken(user._id, sessionId);
 
     // remove password from output
     user.password = undefined;
@@ -63,14 +64,20 @@ exports.login = catchAsync(async (req, res, next) => {
     }
 
     // 2. find user & include password
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password +currentSession');
 
     if (!user || !(await user.correctPassword(password, user.password))) {
         return next(new AppError('Incorrect email or password', 401));
     }
 
-    // 3. send token
-    createSendToken(user, 200, res);
+    // 3. create a new session id and store it on the user to enforce single device
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    user.currentSession = sessionId;
+    // save without running full validation (safe if no schema changes needed)
+    await user.save({ validateBeforeSave: false });
+
+    // 4. send token
+    await createSendToken(user, 200, res);
 });
 
 // protect routes
@@ -84,16 +91,22 @@ exports.protect = catchAsync(async (req, res, next) => {
     }
 
     if (!token) {
-        return next(new AppError('You are not logged in. Please login to access this route', 401));
+        return next(new AppError('You are not logged in. Please login to get access to this route', 401));
     }
 
     // verify token
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
     // find user
-    const currentUser = await User.findById(decoded.id);
+    const currentUser = await User.findById(decoded.id).select('+password +currentSession');
     if (!currentUser) {
         return next(new AppError('User no longer exists', 401));
+    }
+
+    // check that session in token matches the server-side current session
+    if (!decoded.session || currentUser.currentSession !== decoded.session) {
+      console.warn('Session mismatch:', { tokenSession: decoded.session, dbSession: currentUser.currentSession, userId: decoded.id });
+      return next(new AppError('Session invalid or expired (login detected from another device)', 401));
     }
 
     //check whether the user has chaneged their password currently and someone's trying to login with previous token
@@ -103,6 +116,45 @@ exports.protect = catchAsync(async (req, res, next) => {
 
     req.user = currentUser;
     next();
+});
+
+// Logout
+exports.logout = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  user.currentSession = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({ 
+    status: 'success', 
+    message: 'Logged out' 
+  });
+});
+
+// Logout-Beacon
+exports.logoutBeacon = catchAsync(async (req, res, next) => {
+  const token = req.body?.token;
+  if (!token) return res.status(200).json({ status: 'success', message: 'No token' });
+
+  let decoded;
+  try {
+    decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(200).json({ status: 'success', message: 'Token invalid/expired' });
+  }
+
+  const user = await User.findById(decoded.id).select('+currentSession');
+  if (!user) return res.status(200).json({ status: 'success', message: 'User not found' });
+
+  if (decoded.session && user.currentSession === decoded.session) {
+    user.currentSession = undefined;
+    await user.save({ validateBeforeSave: false });
+  }
+
+  res.status(200).json({ status: 'success', message: 'Logged out (beacon)' });
 });
 
 // restrict roles

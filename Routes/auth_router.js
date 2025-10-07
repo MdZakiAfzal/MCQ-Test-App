@@ -5,6 +5,10 @@ const router = express.Router();
 
 router.post('/login', authController.login);
 
+router.post('/logout', authController.protect, authController.logout);
+
+router.post('/logout-beacon', authController.logoutBeacon);
+
 router.post('/create-user', authController.protect, authController.restrictTo('admin', 'teacher'), authController.createUser);
 
 router.post('/forgot-password', authController.forgotPassword);
