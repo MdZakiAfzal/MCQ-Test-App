@@ -13,7 +13,7 @@ const globalErrorHandler = require('./Controllers/error_controller');
 const testRouter = require('./Routes/test_router');
 const attemptRouter = require('./Routes/attempt_router');
 const authRouter = require('./Routes/auth_router');
-const healthRouter = require('./routes/health');
+const healthRouter = require('./Routes/health_router');
 
 const app = express();
 
