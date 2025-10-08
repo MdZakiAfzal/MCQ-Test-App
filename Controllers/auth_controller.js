@@ -220,10 +220,14 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     user.confirmPassword = req.body.confirmPassword;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    user.currentSession = undefined;
     await user.save();
 
-    // 3) Log the user in and send JWT
-    createSendToken(user, 200, res);
+    // 3) Return success response without logging in
+    res.status(200).json({
+        status: 'success',
+        message: 'Password has been reset successfully! Please login with your new password.'
+    });
 });
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
