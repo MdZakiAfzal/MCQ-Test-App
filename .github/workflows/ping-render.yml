@@ -1,0 +1,23 @@
+name: Ping Render Health Endpoint
+
+on:
+  schedule:
+    - cron: '*/13 * * * *'   # every 13 minutes
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          set +e
+          URL="https://mcq-test-app-1m8q.onrender.com/health" 
+          echo "Pinging $URL"
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          echo "HTTP status code: $status_code"
+          if [ "$status_code" -ge 200 ] && [ "$status_code" -lt 400 ]; then
+            echo "Ping successful."
+          else
+            echo "Ping returned $status_code"
+          fi
