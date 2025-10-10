@@ -185,3 +185,33 @@ exports.getPastAttempts = catchAsync(async (req, res, next) => {
     data: { pastTests }
   });
 });
+
+
+// exports.checkAttempt.js (add in your attempts controller file)
+exports.checkAttempt = catchAsync(async (req, res, next) => {
+  const { testId } = req.params;
+  // find the most recent completed attempt (if any) for this user & test
+  const attempt = await Attempt.findOne({ student: req.user._id, test: testId, completed: true })
+    .sort({ attemptedAt: -1 }) // latest first
+    .select('attemptedAt score _id summary'); // pick only needed fields
+
+  if (!attempt) {
+    return res.status(200).json({
+      status: 'success',
+      data: { attempted: false }
+    });
+  }
+
+  return res.status(200).json({
+    status: 'success',
+    data: {
+      attempted: true,
+      lastAttempt: {
+        attemptId: attempt._id,
+        attemptedAt: attempt.attemptedAt,
+        score: attempt.score ?? attempt.summary?.score ?? null,
+        summary: attempt.summary ?? null
+      }
+    }
+  });
+});

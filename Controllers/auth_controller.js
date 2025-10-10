@@ -105,7 +105,6 @@ exports.protect = catchAsync(async (req, res, next) => {
 
     // check that session in token matches the server-side current session
     if (!decoded.session || currentUser.currentSession !== decoded.session) {
-      console.warn('Session mismatch:', { tokenSession: decoded.session, dbSession: currentUser.currentSession, userId: decoded.id });
       return next(new AppError('Session invalid or expired (login detected from another device)', 401));
     }
 

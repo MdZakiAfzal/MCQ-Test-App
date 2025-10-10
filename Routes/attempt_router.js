@@ -18,4 +18,7 @@ router.post('/:testId/submit', validateBody(submitAttemptSchema), attemptControl
 // Past attempts
 router.get('/past', attemptController.getPastAttempts);
 
+// Attempted a particular test
+router.get('/check/:testId', attemptController.checkAttempt);
+
 module.exports = router;
