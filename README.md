@@ -1,0 +1,1 @@
+This is a MCQ based test platform, Here teachers can login in and create, update, delete tests, Students can login and attempt those tests. Teachers can also view student's rank vise score for each test too.
