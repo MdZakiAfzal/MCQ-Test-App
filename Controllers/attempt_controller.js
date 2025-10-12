@@ -3,6 +3,7 @@ const Test = require(`../Models/test_model`);
 const AppError = require(`../utils/appErrors`);
 const catchAsync = require(`../utils/catchAsync`);
 const { getEndOfISTDay, formatToIST } = require(`../utils/timeUtils`);
+const SimplePaginationFilteration = require(`../utils/pagging_filtering`);
 
 // Start Attempt
 exports.startAttempt = catchAsync(async (req, res, next) => {
@@ -150,15 +151,51 @@ exports.submitAttempt = catchAsync(async (req, res, next) => {
 
 // Past Attempts
 exports.getPastAttempts = catchAsync(async (req, res, next) => {
-  const attempts = await Attempt.find({ student: req.user._id, completed: true })
-    .populate({
-      path: 'test',
-      select: 'title questions'
-    })
-    .select('summary score answers attemptedAt test')
-    .sort({ attemptedAt: -1 });
 
-  const pastTests = attempts.map(a => {
+  // Base filter for past attempts
+  const baseFilter = {
+    student: req.user._id,
+    completed: true
+  };
+
+  // Initialize pagination with base filter
+  const pagination = new SimplePaginationFilteration(Attempt, req.query, baseFilter);
+
+  pagination.buildDateFilter = function(dateField = 'attemptedAt') {
+    const { startDate, endDate } = this.queryString;
+    const dateFilter = {};
+
+    if (startDate || endDate) {
+      dateFilter[dateField] = {};
+      
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter[dateField].$gte = start;
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter[dateField].$lte = end;
+      }
+    }
+    return dateFilter;
+  };
+
+  // Execute pagination
+  pagination.sortField = '-attemptedAt';
+  await pagination.paginate();
+  const attempts = pagination.getData();
+
+
+  // Populate test data and process results
+  const populatedAttempts = await Attempt.populate(attempts, {
+    path: 'test',
+    select: 'title questions'
+  });
+
+  const pastTests = populatedAttempts.map(a => {
     if (!a.test) {
       return null; // skip if test was deleted
     }
@@ -182,7 +219,10 @@ exports.getPastAttempts = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     results: pastTests.length,
-    data: { pastTests }
+    data: { 
+      pastTests,
+      pagination: pagination.getPaginationInfo()
+    }
   });
 });
 

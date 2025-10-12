@@ -4,6 +4,7 @@ const Test = require(`../Models/test_model`);
 const { toUTCFromISTInput, getEndOfISTDay, getISTDayBounds, formatToIST } = require(`../utils/timeUtils`);
 const { validateTestInput } = require(`../utils/validateTest`);
 const Attempt = require(`../Models/attempt_model`);
+const SimplePaginationFilteration = require(`../utils/pagging_filtering`);
 
 // CREATE TEST (admin/teacher)
 exports.createTest = catchAsync(async (req, res, next) => {
@@ -76,21 +77,67 @@ exports.getTodayTests = catchAsync(async (req, res, next) => {
 
 // Get All Tests (admin/teacher)
 exports.getAllTests = catchAsync(async (req, res, next) => {
-  const tests = await Test.find()
-    .populate('createdBy', 'name email role')
-    .sort({ startTime: -1 });
+  // Initialize pagination with date filter
+  const pagination = new SimplePaginationFilteration(Test, req.query); 
 
-  const formattedTests = tests.map(t => {
+  // Override to use 'startTime' as date field
+  pagination.buildDateFilter = function(dateField = 'startTime') {
+    const { startDate, endDate } = this.queryString;
+    const dateFilter = {};
+
+    if (startDate || endDate) {
+      dateFilter[dateField] = {};
+      
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter[dateField].$gte = start;
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter[dateField].$lte = end;
+      }
+    }
+    return dateFilter;
+  };
+
+  // Execute pagination
+  pagination.sortField = '-startTime';
+  await pagination.paginate();
+  const tests = pagination.getData();
+
+  const populatedTests = await Test.populate(tests, {
+    path: 'createdBy',
+    select: 'name email role'
+  });
+
+  const formattedTests = populatedTests.map(t => {
     const obj = t.toObject();
     obj.startTimeIST = formatToIST(t.startTime);
     obj.endTimeIST = formatToIST(t.endTime);
+    
+    // Add status for frontend
+    const now = new Date();
+    if (now < t.startTime) {
+      obj.status = 'upcoming';
+    } else if (now >= t.startTime && now <= t.endTime) {
+      obj.status = 'active';
+    } else {
+      obj.status = 'past';
+    }
+    
     return obj;
   });
 
-  return res.status(200).json({
+  res.status(200).json({
     status: 'success',
     results: formattedTests.length,
-    data: { tests: formattedTests }
+    data: { 
+      tests: formattedTests,
+      pagination: pagination.getPaginationInfo()
+    }
   });
 });
 
